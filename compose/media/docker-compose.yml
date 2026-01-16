@@ -73,6 +73,21 @@ services:
     ports:
       - "${JELLYFIN_PORT}:8096"
     restart: unless-stopped
+jellyseerr:
+  image: fallenbagel/jellyseerr:latest
+  container_name: jellyseerr
+  environment:
+    TZ: ${TZ}
+  volumes:
+    - /data/appdata/jellyseerr:/app/config
+  ports:
+    - "${JELLYSEERR_PORT}:5055"
+  restart: unless-stopped
+  depends_on:
+    - jellyfin
+    - sonarr
+    - radarr
+
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
@@ -127,17 +142,4 @@ services:
       - /data/media:/data/media
     ports:
       - "${BAZARR_PORT}:6767"
-    restart: unless-stopped
-
-  overseerr:
-    image: lscr.io/linuxserver/overseerr:latest
-    container_name: overseerr
-    environment:
-      PUID: ${PUID}
-      PGID: ${PGID}
-      TZ: ${TZ}
-    volumes:
-      - /data/appdata/overseerr:/config
-    ports:
-      - "${OVERSEERR_PORT}:5055"
     restart: unless-stopped
