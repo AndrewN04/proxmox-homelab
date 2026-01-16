@@ -1,0 +1,16 @@
+# Gluetun control server auth config used by qSticky.
+# Create roles with routes required by qSticky:
+# - GET /v1/portforward
+# - GET /v1/vpn/status
+#
+# Copy to: compose/media/gluetun/config.toml
+# Then set permissions: chmod 600 compose/media/gluetun/config.toml
+
+[[roles]]
+name = "qSticky"
+routes = [
+  "GET /v1/portforward",
+  "GET /v1/vpn/status"
+]
+auth = "apikey"
+apikey = "EXAMPLE_GLUETUN_API_KEY"

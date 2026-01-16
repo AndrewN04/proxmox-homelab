@@ -1,0 +1,5 @@
+# RomM config.yml placeholder
+# Copy to: compose/romm/config/config.yml (or map from /data/appdata/romm/config)
+#
+# NOTE: RomM docs describe the required structure and options for this file.
+# Keep this file out of git if it contains secrets.
