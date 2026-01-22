@@ -1,0 +1,18 @@
+services:
+  crafty:
+    container_name: crafty_container
+    image: registry.gitlab.com/crafty-controller/crafty-4:latest
+    restart: unless-stopped
+    environment:
+      - TZ=America/Chicago
+    ports:
+      - "192.168.4.203:8443:8443"              # Panel (LAN/WG only)
+      - "192.168.4.203:8123:8123"              # Dynmap (optional)
+      - "192.168.4.203:19132:19132/udp"        # Bedrock (optional)
+      - "192.168.4.203:25500-25600:25500-25600" # Crafty MC port range
+    volumes:
+      - ./docker/backups:/crafty/backups
+      - ./docker/logs:/crafty/logs
+      - ./docker/servers:/crafty/servers
+      - ./docker/config:/crafty/app/config
+      - ./docker/import:/crafty/import

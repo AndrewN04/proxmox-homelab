@@ -1,0 +1,35 @@
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SERVERURL=${WG_SERVERURL}
+      - SERVERPORT=${WG_SERVERPORT}
+      - PEERS=${WG_PEERS}
+      - ALLOWEDIPS=${WG_ALLOWEDIPS}
+    volumes:
+      - ./wireguard/config:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: npm
+    restart: unless-stopped
+    ports:
+      - "192.168.4.202:80:80"
+      - "192.168.4.202:81:81"
+      - "192.168.4.202:443:443"
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt

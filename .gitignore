@@ -1,21 +1,28 @@
-# Secrets / env
+# Secrets
+**/.env
 **/*.env
-**/*.env.*
-!**/*.env.example
-**/secrets/*
-!**/secrets/.gitkeep
-**/*.key
-**/*.pem
-**/*.pfx
 **/config.toml
-!**/*.example
+**/*secret*
+**/*apikey*
 
-# Local state
+# Local state / persistent data (bind mounts)
+**/data/
+**/letsencrypt/
+**/wireguard/config/
+**/npm/data/
+**/npm/letsencrypt/
+**/qbittorrent/config/
+**/servarr/
+**/jellyfin/config/
+**/jellyseerr/config/
+**/romm/
+**/postgres/
+**/mysql/
+**/docker/
+
+# OS/editor
 .DS_Store
 Thumbs.db
-.idea/
+*.swp
+*.tmp
 .vscode/
-*.log
-
-# Compose volumes (if you ever mount into repo - avoid)
-**/data/

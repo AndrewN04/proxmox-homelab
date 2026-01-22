@@ -1,0 +1,8 @@
+[[roles]]
+name = "qSticky"
+routes = [
+    "GET /v1/portforward",
+    "GET /v1/vpn/status"
+]
+auth = "apikey"
+apikey = "<SAME_AS_GLUETUN_APIKEY>"
