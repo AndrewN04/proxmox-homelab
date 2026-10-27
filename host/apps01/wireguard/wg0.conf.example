@@ -1,0 +1,12 @@
+[Interface]
+Address = <WG_SERVER_IP>
+ListenPort = 51820
+PrivateKey = <WG_SERVER_PRIVKEY>
+
+PostUp   = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o <NIC> -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o <NIC> -j MASQUERADE
+
+# --- one [Peer] block per client, appended as you add devices ---
+# [Peer]
+# PublicKey = <CLIENT_PUBKEY>
+# AllowedIPs = 10.10.10.2/32

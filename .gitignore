@@ -1,28 +1,16 @@
-# Secrets
-**/.env
-**/*.env
-**/config.toml
-**/*secret*
-**/*apikey*
+# Real secrets and filled-in configs never enter this repo — only *.example templates do.
+.env
+*.env
+!*.env.example
+config.toml
+wg0.conf
+client.conf
+*.key
+recyclarr.yml
+99-static.yaml
 
-# Local state / persistent data (bind mounts)
-**/data/
-**/letsencrypt/
-**/wireguard/config/
-**/npm/data/
-**/npm/letsencrypt/
-**/qbittorrent/config/
-**/servarr/
-**/jellyfin/config/
-**/jellyseerr/config/
-**/romm/
-**/postgres/
-**/mysql/
-**/docker/
-
-# OS/editor
+# OS / editor
 .DS_Store
 Thumbs.db
 *.swp
-*.tmp
 .vscode/

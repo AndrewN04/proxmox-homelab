@@ -1,0 +1,10 @@
+[Interface]
+PrivateKey = <CLIENT_PRIVKEY>
+Address    = 10.10.10.2/32
+DNS        = <GATEWAY>
+
+[Peer]
+PublicKey           = <WG_SERVER_PUBKEY>
+Endpoint            = <WG_HOST>:51820
+AllowedIPs          = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25

@@ -1,0 +1,7 @@
+[Unit]
+Description=Back up /srv/appdata to the NAS
+After=data.mount docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/appdata-backup.sh

@@ -1,0 +1,125 @@
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment: { PUID: 1000, PGID: 1000, TZ: "${TZ}" }
+    volumes:
+      - /srv/appdata/sonarr:/config
+      - /data:/data                 # TRaSH: identical path in and out
+    ports: ["${MEDIA01_IP}:8989:8989"]
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment: { PUID: 1000, PGID: 1000, TZ: "${TZ}" }
+    volumes:
+      - /srv/appdata/radarr:/config
+      - /data:/data
+    ports: ["${MEDIA01_IP}:7878:7878"]
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+      # What Jellyfin advertises to clients. Per LinuxServer/Jellyfin docs this should
+      # be the reverse-proxy URL — the proxy host already exists from §9.8.
+      JELLYFIN_PublishedServerUrl: https://jellyfin.${LAN_ZONE}
+    group_add:
+      - "${RENDER_GID}"              # from `getent group render` in §11.2
+    devices:
+      - /dev/dri:/dev/dri           # omit this and group_add if §11.2 was skipped
+    volumes:
+      - /srv/appdata/jellyfin:/config
+      - /data/media:/data/media
+    ports: ["${MEDIA01_IP}:8096:8096"]
+
+  seerr:
+    # Jellyseerr and Overseerr merged into Seerr (v3.0.0, Feb 2026). fallenbagel/jellyseerr
+    # is the old name — do not use it. Seerr runs as the image's `node` user (UID 1000),
+    # which §11.1's chown already matches; do NOT add a `user:` directive.
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    restart: unless-stopped
+    init: true                      # required since Seerr 3.x — the image ships no init process
+    environment:
+      TZ: ${TZ}
+      LOG_LEVEL: info
+    volumes:
+      - /srv/appdata/seerr:/app/config
+    ports: ["${MEDIA01_IP}:5055:5055"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1"]
+      start_period: 20s
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      SECRET_ENCRYPTION_KEY: ${HOMARR_SECRET_KEY}  # from .env (§3.5) — required; never change it after first start
+    volumes:
+      - /srv/appdata/homarr:/appdata
+      # No /var/run/docker.sock mount, although upstream's example has one: socket access is
+      # root on media01, and Homarr reaches every service through its integrations instead.
+    ports: ["${MEDIA01_IP}:7575:7575"]
+
+  recyclarr:
+    image: recyclarr/recyclarr:8      # ⚠ :latest is NO LONGER PUBLISHED — pin the major tag
+    container_name: recyclarr
+    restart: unless-stopped
+    user: 1000:1000
+    environment:
+      TZ: ${TZ}
+      CRON_SCHEDULE: "0 4 * * *"      # daily at 04:00
+    volumes:
+      - /srv/appdata/recyclarr:/config
+
+  qui:
+    image: ghcr.io/autobrr/qui:v1.33.1  # pinned: :latest is rolling and cannot enforce the >= 1.27.0
+                                        # floor. Older builds lack the hardlink fixes (§11.9).
+    container_name: qui
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      # PUID/PGID were added in 1.27.0. §11.1 chowns /srv/appdata/qui to 1000:1000,
+      # so set these to match rather than relying on the image's default user.
+      PUID: 1000
+      PGID: 1000
+    volumes:
+      - /srv/appdata/qui:/config
+      - /data:/data:ro              # ⚠ REQUIRED for §11.9. Identical path in and out, read-only
+                                    # qBittorrent's mount — qui stats the files to read link counts,
+                                    # and both containers must see one host mount for inode numbers
+                                    # to match. Without this every HARDLINK_SCOPE test returns false.
+    ports: ["${MEDIA01_IP}:7476:7476"]
+
+  questarr:
+    image: ghcr.io/doezer/questarr:latest
+    container_name: questarr
+    restart: unless-stopped
+    environment:
+      # ⚠ Upstream documents PUID/PGID only for its Unraid template — its plain-Docker
+      # compose example sets neither. They are set here to match §11.1's chown and are
+      # harmless if the image ignores them, but VERIFY after first start:
+      #     ls -ln /srv/appdata/questarr
+      # Expect 1000 1000 on the SQLite database. If it comes back owned by some other
+      # UID, the image is not honouring these — stop the container, chown to whatever
+      # it actually runs as, and record it in the As-Built. Never chown a live DB.
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+      TRUST_PROXY: "1"              # 1.5.0+: one proxy hop (NPM), so rate limits see real client IPs
+    volumes:
+      - /srv/appdata/questarr:/app/data
+      - /data:/data
+    ports: ["${MEDIA01_IP}:5000:5000"]

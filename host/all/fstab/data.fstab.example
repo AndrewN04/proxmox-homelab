@@ -1,0 +1,2 @@
+# Append to /etc/fstab on apps01, dl01, media01 and games01 (runbook §9.1). Every option is load-bearing — see §9.1.
+<TRUENAS_IP>:/mnt/<POOL>/<DATASET>  /data  nfs4  _netdev,noatime,hard,timeo=600,retrans=2,nofail,x-systemd.mount-timeout=30  0  0

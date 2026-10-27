@@ -1,0 +1,61 @@
+services:
+  romm:
+    image: rommapp/romm:latest
+    container_name: romm
+    restart: unless-stopped
+    environment:
+      DB_HOST: romm-db
+      DB_NAME: romm
+      DB_USER: romm-user
+      DB_PASSWD: ${ROMM_DB_PASS}
+      ROMM_AUTH_SECRET_KEY: ${ROMM_AUTH_SECRET_KEY}
+      HASHEOUS_API_ENABLED: "true"
+      # ⚠ SCAN_WORKERS and WEB_SERVER_CONCURRENCY are deliberately NOT set here.
+      # Both default to 1 (backend/config/__init__.py: max(1, safe_int(..., 1)); and
+      # gunicorn --workers "${WEB_SERVER_CONCURRENCY:-1}" in docker/init_scripts/init),
+      # which is what this host wants. Upstream's example RAISES them to 2 and 3 with
+      # the guidance "1 worker per CPU" and "2 x CPU + 1" — that is written for a
+      # dedicated box. games01's 4 vCPU are shared with Wings and a Minecraft server
+      # whose tick loop is single-threaded and latency-sensitive (§5.3), and RomM's
+      # scans are manual-trigger only for the same reason. Copying upstream's numbers
+      # here trades game-server tick rate for faster ROM scanning. Leave them unset.
+      # Optional metadata providers — fill in only those you have registered for:
+      # SCREENSCRAPER_USER:
+      # SCREENSCRAPER_PASSWORD:
+      # RETROACHIEVEMENTS_API_KEY:
+      # STEAMGRIDDB_API_KEY:
+    volumes:
+      - /srv/appdata/romm/resources:/romm/resources   # cover art, screenshots
+      - /srv/appdata/romm/redis:/redis-data           # bundled Valkey persistence.
+                                                     # RomM's current quick-start compose states this
+                                                     # mapping explicitly as `romm_redis_data:/redis-data`
+                                                     # (re-verified 6 Sep 2026). ⚠ Still confirm it against
+                                                     # the docs before first start and record it — this
+                                                     # path went undocumented for several releases.
+      - /srv/appdata/romm/assets:/romm/assets         # uploaded saves and states
+      - /srv/appdata/romm/config:/romm/config
+      - /data/nas/roms/library:/romm/library          # the ROMs themselves, on the NAS
+    ports:
+      - "${GAMES01_IP}:8081:8080"           # host 8081 -> container 8080 (Wings owns 8080)
+    depends_on:
+      romm-db:
+        condition: service_healthy
+        restart: true
+
+  romm-db:
+    image: mariadb:11
+    container_name: romm-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${ROMM_DB_ROOT_PASS}
+      MARIADB_DATABASE: romm
+      MARIADB_USER: romm-user
+      MARIADB_PASSWORD: ${ROMM_DB_PASS}
+    volumes:
+      - /srv/appdata/romm/db:/var/lib/mysql           # bind-mounted so §15 backs it up
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5

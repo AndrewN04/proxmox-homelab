@@ -1,0 +1,6 @@
+[Unit]
+Description=Back up the Pterodactyl Panel database and .env
+After=mariadb.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/panel-backup.sh

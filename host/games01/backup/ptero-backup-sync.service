@@ -1,0 +1,6 @@
+[Unit]
+Description=Mirror Pterodactyl backups to the NAS
+After=data.mount
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ptero-backup-sync.sh

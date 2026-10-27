@@ -1,0 +1,14 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    <NIC>:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - <THIS_VM_IP>/<CIDR_BITS>
+      routes:
+        - to: default
+          via: <GATEWAY>
+      nameservers:
+        addresses: [<DNS1>, <DNS2>]

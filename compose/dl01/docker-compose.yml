@@ -1,0 +1,99 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.41.3        # pinned: :latest tracks master HEAD, not the release
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: protonvpn
+      VPN_TYPE: wireguard
+      WIREGUARD_PRIVATE_KEY: ${PROTON_WG_PRIVKEY}
+      WIREGUARD_ADDRESSES: ${PROTON_WG_ADDRESS}
+      SERVER_COUNTRIES: ${SERVER_COUNTRIES}
+      PORT_FORWARD_ONLY: "on"            # only select servers that support port forwarding
+      VPN_PORT_FORWARDING: "on"
+      VPN_PORT_FORWARDING_PROVIDER: protonvpn
+      GLUETUN_HTTP_CONTROL_SERVER_ENABLE: "on"
+      FIREWALL: "on"                     # kill-switch: no egress if the tunnel drops
+      FIREWALL_OUTBOUND_SUBNETS: ${LAN_CIDR}   # lets the WebUI answer LAN clients
+      DOT: "on"
+      TZ: ${TZ}
+    volumes:
+      # One mount only. /srv/appdata/gluetun/auth/config.toml (§10.3) therefore appears
+      # inside the container at /gluetun/auth/config.toml, which is exactly where gluetun
+      # looks for it. Adding a second bind for that same file on top of this one is
+      # redundant and can shadow the directory mount depending on ordering.
+      - /srv/appdata/gluetun:/gluetun
+    ports:
+      # ⚠ Only the two WebUIs. Control server 8000 is deliberately NOT published.
+      - "${DL01_IP}:8080:8080"           # qBittorrent WebUI
+      - "${DL01_IP}:9696:9696"           # Prowlarr
+    # No custom healthcheck: the gluetun image ships its own HEALTHCHECK, which is what
+    # `condition: service_healthy` below waits on. Overriding it with a guessed binary
+    # path leaves every dependent container stuck in "waiting".
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:libtorrentv1   # pinned: :latest is a libtorrent 2.0.x build (§10.5.2)
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"      # shares gluetun's network namespace
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+      WEBUI_PORT: 8080
+    volumes:
+      - /srv/appdata/qbittorrent:/config
+      - /data:/data                      # TRaSH: identical path in and out
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf https://api.ipify.org || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+    volumes:
+      - /srv/appdata/prowlarr:/config
+
+  qsticky:
+    image: ghcr.io/monstermuffin/qsticky:latest
+    container_name: qsticky
+    restart: unless-stopped
+    # ⚠ NORMAL compose network — deliberately NOT network_mode: container:gluetun.
+    # Sharing gluetun's namespace breaks qSticky's network stack every time gluetun restarts,
+    # which is exactly the event it exists to recover from.
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      QBITTORRENT_HOST: gluetun
+      QBITTORRENT_PORT: 8080
+      QBITTORRENT_HTTPS: "false"
+      QBITTORRENT_API_KEY: ${QBIT_API_KEY}   # from .env — keep secrets out of the compose file
+      GLUETUN_HOST: gluetun
+      GLUETUN_PORT: 8000
+      GLUETUN_AUTH_TYPE: apikey
+      GLUETUN_APIKEY: ${GLUETUN_APIKEY}
+      CHECK_INTERVAL: 30
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

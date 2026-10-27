@@ -1,0 +1,17 @@
+sonarr:
+  main:
+    base_url: http://<MEDIA01_IP>:8989
+    api_key: <SONARR_API_KEY>
+    include:
+      - template: sonarr-quality-definition-series
+      - template: sonarr-v4-quality-profile-web-1080p
+      - template: sonarr-v4-custom-formats-web-1080p
+
+radarr:
+  main:
+    base_url: http://<MEDIA01_IP>:7878
+    api_key: <RADARR_API_KEY>
+    include:
+      - template: radarr-quality-definition-movie
+      - template: radarr-quality-profile-hd-bluray-web
+      - template: radarr-custom-formats-hd-bluray-web
